@@ -1176,16 +1176,29 @@ function openScanner(){ document.getElementById('scan-modal').classList.add('on'
 function closeScanner(){ document.getElementById('scan-modal').classList.remove('on'); stopSaleCam(); }
 async function startSaleCam(){
   try{
-    camStreamSale=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const constraints=[
+      {video:{facingMode:{exact:'environment'}}},
+      {video:{facingMode:'environment'}},
+      {video:true}
+    ];
+    let stream=null;
+    for(const c of constraints){
+      try{stream=await navigator.mediaDevices.getUserMedia(c);break;}catch(e){}
+    }
+    if(!stream) throw new Error('لا يمكن الوصول للكاميرا');
+    camStreamSale=stream;
     const vid=document.getElementById('qr-video');
-    vid.srcObject=camStreamSale;
-    await vid.play();
+    vid.srcObject=stream;
+    vid.setAttribute('playsinline','true');
+    vid.setAttribute('autoplay','true');
+    vid.muted=true;
+    await vid.play().catch(()=>{});
     if('BarcodeDetector' in window){
       const bd=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e']});
       const loop=async()=>{
         if(!camStreamSale)return;
         try{
-          if(vid.readyState===vid.HAVE_ENOUGH_DATA){
+          if(vid.readyState>=2){
             const r=await bd.detect(vid);
             if(r.length){closeScanner();addToCartByCode(r[0].rawValue);return;}
           }
@@ -1194,7 +1207,6 @@ async function startSaleCam(){
       };
       loop();
     } else {
-      // fallback: ZXing
       if(!window.ZXing){
         await new Promise((res,rej)=>{
           const s=document.createElement('script');
@@ -1203,8 +1215,7 @@ async function startSaleCam(){
           document.head.appendChild(s);
         });
       }
-      const hints=new Map();
-      const codeReader=new ZXing.BrowserMultiFormatReader(hints);
+      const codeReader=new ZXing.BrowserMultiFormatReader();
       codeReader.decodeFromVideoElement(vid,(result,err)=>{
         if(result){codeReader.reset();closeScanner();addToCartByCode(result.getText());}
       });
@@ -1224,16 +1235,29 @@ function openProdScanner(){ document.getElementById('scan-prod-modal').classList
 function closeProdScanner(){ document.getElementById('scan-prod-modal').classList.remove('on'); stopProdCam(); }
 async function startProdCam(){
   try{
-    camStreamProd=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const constraints=[
+      {video:{facingMode:{exact:'environment'}}},
+      {video:{facingMode:'environment'}},
+      {video:true}
+    ];
+    let stream=null;
+    for(const c of constraints){
+      try{stream=await navigator.mediaDevices.getUserMedia(c);break;}catch(e){}
+    }
+    if(!stream) throw new Error('لا يمكن الوصول للكاميرا');
+    camStreamProd=stream;
     const vid=document.getElementById('qr-video-prod');
-    vid.srcObject=camStreamProd;
-    await vid.play();
+    vid.srcObject=stream;
+    vid.setAttribute('playsinline','true');
+    vid.setAttribute('autoplay','true');
+    vid.muted=true;
+    await vid.play().catch(()=>{});
     if('BarcodeDetector' in window){
       const bd=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e']});
       const loop=async()=>{
         if(!camStreamProd)return;
         try{
-          if(vid.readyState===vid.HAVE_ENOUGH_DATA){
+          if(vid.readyState>=2){
             const r=await bd.detect(vid);
             if(r.length){closeProdScanner();applyBarcode(r[0].rawValue);return;}
           }
